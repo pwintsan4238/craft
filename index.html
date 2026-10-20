@@ -100,6 +100,16 @@ index.html
             "headline-md": ["Playfair Display", "serif"],
             "button": ["Plus Jakarta Sans", "sans-serif"],
             "label-caps": ["Plus Jakarta Sans", "sans-serif"]
+          },
+          fontSize: {
+            "display-lg": ["48px", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "700" }],
+            "display-lg-mobile": ["32px", { lineHeight: "1.2", fontWeight: "700" }],
+            "headline-md": ["32px", { lineHeight: "1.3", fontWeight: "600" }],
+            "headline-sm": ["24px", { lineHeight: "1.4", fontWeight: "600" }],
+            "body-lg": ["18px", { lineHeight: "1.6" }],
+            "body-md": ["16px", { lineHeight: "1.6" }],
+            "label-caps": ["12px", { lineHeight: "1", letterSpacing: "0.1em", fontWeight: "700" }],
+            "button": ["14px", { lineHeight: "1", letterSpacing: "0.05em", fontWeight: "600" }]
           }
         }
       }
@@ -128,6 +138,22 @@ index.html
     html {
       scroll-behavior: smooth;
     }
+    a:focus-visible, button:focus-visible {
+      outline: 2px solid #C86D51;
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
+    a, button {
+      touch-action: manipulation;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
   </style>
 
   <!-- External React, ReactDOM, History, React Router v6.3.0 and Babel -->
@@ -144,48 +170,96 @@ index.html
   <script type="text/babel">
     const { useState, useEffect } = React;
     const { createRoot } = ReactDOM;
-    const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+    const { HashRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
 
     // --- SHARED COMPONENTS ---
+    const ScrollToTop = () => {
+      const { pathname } = useLocation();
+      useEffect(() => { window.scrollTo({ top: 0, behavior: "instant" }); }, [pathname]);
+      return null;
+    };
+
+    // Scrolls to the FAQ section, going to the home page first if it is not on this page
+    const FaqLink = ({ className, children }) => {
+      const navigate = useNavigate();
+      // Offset keeps the section heading clear of the fixed header
+      const scrollTo = (el) => {
+        window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+      };
+      const scrollToFaq = () => {
+        const el = document.getElementById('faq');
+        if (el) {
+          scrollTo(el);
+        } else {
+          navigate('/');
+          setTimeout(() => {
+            const faq = document.getElementById('faq');
+            if (faq) scrollTo(faq);
+          }, 100);
+        }
+      };
+      return (
+        <a href="#/" className={className} onClick={(e) => { e.preventDefault(); scrollToFaq(); }}>
+          {children}
+        </a>
+      );
+    };
+
     const Header = () => {
       const [lang, setLang] = useState('EN');
       const [searchOpen, setSearchOpen] = useState(false);
       const [searchQuery, setSearchQuery] = useState('');
+      const [menuOpen, setMenuOpen] = useState(false);
       const location = useLocation();
 
+      const navItems = [
+        { to: '/', label: 'Home' },
+        { to: '/story', label: 'Kith Story' },
+        { to: '/collections', label: 'Collections' },
+        { to: '/contact', label: 'Contact Us' }
+      ];
+
+      useEffect(() => { setMenuOpen(false); }, [location.pathname]);
+
+      useEffect(() => {
+        if (!menuOpen) return;
+        const onKey = (e) => { if (e.key === 'Escape') setMenuOpen(false); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+      }, [menuOpen]);
+
       return (
-        <header className="fixed top-0 left-0 w-full z-50 bg-[#1a1a1a]/85 backdrop-blur-md border-b border-white/10 px-6 lg:px-10 py-3.5 flex items-center justify-between whitespace-nowrap transition-all duration-300">
+        <header className="fixed top-0 left-0 w-full z-50 bg-[#1a1a1a]/85 backdrop-blur-md border-b border-white/10 px-4 sm:px-6 lg:px-10 py-3 flex items-center justify-between whitespace-nowrap transition-all duration-300">
+          {/* Mobile Menu Toggle */}
+          <div className="flex-1 flex items-center lg:hidden">
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-menu"
+              className="w-11 h-11 -ml-2 flex items-center justify-center text-white rounded-full hover:bg-white/10 transition-colors"
+            >
+              <span className="material-symbols-outlined text-[26px]" aria-hidden="true">{menuOpen ? 'close' : 'menu'}</span>
+            </button>
+          </div>
+
           {/* Navigation Links */}
-          <nav className="flex-1 flex items-center gap-6 lg:gap-8">
-            <Link 
-              className={`text-xs sm:text-[13px] font-medium uppercase tracking-[0.12em] transition-all hover:text-white/80 ${location.pathname === '/' ? 'text-white border-b-2 border-white/80 pb-0.5' : 'text-neutral-300'}`} 
-              to="/"
-            >
-              Home
-            </Link>
-            <Link 
-              className={`text-xs sm:text-[13px] font-medium uppercase tracking-[0.12em] transition-all hover:text-white/80 ${location.pathname === '/story' ? 'text-white border-b-2 border-white/80 pb-0.5' : 'text-neutral-300'}`} 
-              to="/story"
-            >
-              Kith Story
-            </Link>
-            <Link 
-              className={`text-xs sm:text-[13px] font-medium uppercase tracking-[0.12em] transition-all hover:text-white/80 ${location.pathname === '/collections' ? 'text-white border-b-2 border-white/80 pb-0.5' : 'text-neutral-300'}`} 
-              to="/collections"
-            >
-              Collections
-            </Link>
-            <Link 
-              className={`text-xs sm:text-[13px] font-medium uppercase tracking-[0.12em] transition-all hover:text-white/80 ${location.pathname === '/contact' ? 'text-white border-b-2 border-white/80 pb-0.5' : 'text-neutral-300'}`} 
-              to="/contact"
-            >
-              Contact Us
-            </Link>
+          <nav aria-label="Main" className="flex-1 hidden lg:flex items-center gap-8">
+            {navItems.map(item => (
+              <Link
+                key={item.to}
+                aria-current={location.pathname === item.to ? 'page' : undefined}
+                className={`py-2 text-[13px] font-medium uppercase tracking-[0.12em] transition-colors hover:text-white ${location.pathname === item.to ? 'text-white border-b-2 border-white/80' : 'text-neutral-300 border-b-2 border-transparent'}`}
+                to={item.to}
+              >
+                {item.label}
+              </Link>
+            ))}
           </nav>
 
           {/* Logo */}
           <div className="flex-shrink-0">
-            <Link className="font-display-lg text-2xl md:text-3xl tracking-tight text-white hover:opacity-90 transition-opacity" to="/">
+            <Link aria-label="Kith Craft home" className="block font-display-lg text-2xl md:text-3xl tracking-tight text-white hover:opacity-90 transition-opacity" to="/">
               <img 
                 alt="Kith Craft Logo" 
                 className="h-10 md:h-12 w-auto object-cover rounded-xl" 
@@ -195,47 +269,86 @@ index.html
           </div>
 
           {/* Utility Tools */}
-          <div className="flex-1 flex items-center justify-end gap-3 lg:gap-6">
+          <div className="flex-1 flex items-center justify-end gap-2 lg:gap-6">
             {searchOpen ? (
-              <div className="flex items-center bg-white/10 rounded-full px-3 py-1 border border-white/20">
-                <input 
-                  type="text" 
+              <div className="flex items-center bg-white/10 rounded-full pl-3 pr-1 py-0.5 border border-white/20">
+                <input
+                  type="search"
+                  aria-label="Search craft"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search craft..." 
-                  className="bg-transparent border-none text-xs text-white placeholder-neutral-400 focus:outline-none focus:ring-0 p-0 w-28 sm:w-36"
+                  placeholder="Search craft..."
+                  className="bg-transparent border-none text-sm text-white placeholder-neutral-400 focus:outline-none focus:ring-0 p-0 w-24 sm:w-36"
                   autoFocus
                 />
-                <button onClick={() => setSearchOpen(false)} className="text-white ml-1 text-xs">✕</button>
+                <button onClick={() => setSearchOpen(false)} aria-label="Close search" className="w-8 h-8 flex items-center justify-center text-white rounded-full hover:bg-white/10">
+                  <span className="material-symbols-outlined text-[18px]" aria-hidden="true">close</span>
+                </button>
               </div>
             ) : (
-              <button 
+              <button
                 onClick={() => setSearchOpen(true)}
-                aria-label="Search" 
-                className="text-white hover:text-brand-bamboo transition-colors p-1"
+                aria-label="Search"
+                className="w-11 h-11 flex items-center justify-center text-white rounded-full hover:bg-white/10 hover:text-brand-bamboo transition-colors"
               >
-                <span className="material-symbols-outlined text-[20px]">search</span>
+                <span className="material-symbols-outlined text-[22px]" aria-hidden="true">search</span>
               </button>
             )}
 
-            <div className="flex items-center">
-              <button 
+            <div className="hidden lg:flex items-center">
+              <button
                 onClick={() => setLang(lang === 'EN' ? 'TH' : 'EN')}
-                className="text-xs sm:text-[13px] font-medium uppercase tracking-[0.12em] text-white px-3 border-x border-white/20 hover:text-white/80 transition-all"
+                aria-label={`Switch language to ${lang === 'EN' ? 'Thai' : 'English'}`}
+                className="py-2 text-[13px] font-medium uppercase tracking-[0.12em] text-white px-3 border-x border-white/20 hover:text-white/80 transition-colors"
               >
                 {lang} / {lang === 'EN' ? 'TH' : 'EN'}
               </button>
             </div>
 
-            <a 
-              className="text-[10px] font-semibold uppercase tracking-widest text-white border border-white/80 rounded-full px-3.5 py-1.5 hover:bg-white hover:text-black transition-all shadow-sm" 
-              href="https://facebook.com" 
-              target="_blank" 
+            <a
+              className="hidden sm:inline-flex items-center text-xs font-semibold uppercase tracking-widest text-white border border-white/80 rounded-full px-4 py-2.5 hover:bg-white hover:text-black transition-colors shadow-sm"
+              href="https://facebook.com"
+              target="_blank"
               rel="noreferrer"
             >
               ORDER ON FACEBOOK
             </a>
           </div>
+
+          {/* Mobile Menu Panel */}
+          {menuOpen && (
+            <div id="mobile-menu" className="lg:hidden absolute top-full left-0 w-full bg-[#1a1a1a] border-b border-white/10 shadow-xl">
+              <nav aria-label="Mobile" className="flex flex-col px-4 sm:px-6 py-4">
+                {navItems.map(item => (
+                  <Link
+                    key={item.to}
+                    aria-current={location.pathname === item.to ? 'page' : undefined}
+                    className={`py-3.5 border-b border-white/10 text-sm font-medium uppercase tracking-[0.12em] ${location.pathname === item.to ? 'text-white' : 'text-neutral-300 hover:text-white'}`}
+                    to={item.to}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+                <div className="flex items-center justify-between gap-4 pt-5 pb-2">
+                  <button
+                    onClick={() => setLang(lang === 'EN' ? 'TH' : 'EN')}
+                    aria-label={`Switch language to ${lang === 'EN' ? 'Thai' : 'English'}`}
+                    className="min-h-[44px] px-1 text-sm font-medium uppercase tracking-[0.12em] text-white"
+                  >
+                    {lang} / {lang === 'EN' ? 'TH' : 'EN'}
+                  </button>
+                  <a
+                    className="inline-flex items-center min-h-[44px] text-xs font-semibold uppercase tracking-widest text-black bg-white rounded-full px-5 hover:bg-brand-bamboo transition-colors"
+                    href="https://facebook.com"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    ORDER ON FACEBOOK
+                  </a>
+                </div>
+              </nav>
+            </div>
+          )}
         </header>
       );
     };
@@ -268,23 +381,23 @@ index.html
 
                 <div>
                   <h4 className="font-headline-sm text-[17px] font-semibold mb-4 text-on-primary">KITH CRAFT COLLECTIONS</h4>
-                  <ul className="space-y-3 font-body-md text-sm text-inverse-on-surface/80">
-                    <li><Link className="hover:text-brand-bamboo transition-colors" to="/collections">Shoulder Bags</Link></li>
-                    <li><Link className="hover:text-brand-bamboo transition-colors" to="/collections">Embroidered Clutches</Link></li>
-                    <li><Link className="hover:text-brand-bamboo transition-colors" to="/collections">Leather Wallets</Link></li>
-                    <li><Link className="hover:text-brand-bamboo transition-colors" to="/collections">Eco Accessories</Link></li>
-                    <li><Link className="hover:text-brand-bamboo transition-colors" to="/collections">Decorations & Home</Link></li>
+                  <ul className="space-y-1 font-body-md text-sm text-inverse-on-surface/80">
+                    <li><Link className="inline-block py-1 hover:text-brand-bamboo transition-colors" to="/collections">Shoulder Bags</Link></li>
+                    <li><Link className="inline-block py-1 hover:text-brand-bamboo transition-colors" to="/collections">Embroidered Clutches</Link></li>
+                    <li><Link className="inline-block py-1 hover:text-brand-bamboo transition-colors" to="/collections">Leather Wallets</Link></li>
+                    <li><Link className="inline-block py-1 hover:text-brand-bamboo transition-colors" to="/collections">Eco Accessories</Link></li>
+                    <li><Link className="inline-block py-1 hover:text-brand-bamboo transition-colors" to="/collections">Decorations & Home</Link></li>
                   </ul>
                 </div>
 
                 <div>
                   <h4 className="font-headline-sm text-[17px] font-semibold mb-4 text-on-primary">SERVICE POLICY</h4>
-                  <ul className="space-y-3 font-body-md text-sm text-inverse-on-surface/80">
-                    <li><a className="hover:text-brand-bamboo transition-colors" href="#faq">Material Information</a></li>
-                    <li><a className="hover:text-brand-bamboo transition-colors" href="#faq">Shipping & Delivery</a></li>
-                    <li><a className="hover:text-brand-bamboo transition-colors" href="#faq">Order & Payment</a></li>
-                    <li><a className="hover:text-brand-bamboo transition-colors" href="#faq">Returns & Exchanges</a></li>
-                    <li><Link className="hover:text-brand-bamboo transition-colors" to="/contact">FAQ & Support</Link></li>
+                  <ul className="space-y-1 font-body-md text-sm text-inverse-on-surface/80">
+                    <li><FaqLink className="inline-block py-1 hover:text-brand-bamboo transition-colors">Material Information</FaqLink></li>
+                    <li><FaqLink className="inline-block py-1 hover:text-brand-bamboo transition-colors">Shipping & Delivery</FaqLink></li>
+                    <li><FaqLink className="inline-block py-1 hover:text-brand-bamboo transition-colors">Order & Payment</FaqLink></li>
+                    <li><FaqLink className="inline-block py-1 hover:text-brand-bamboo transition-colors">Returns & Exchanges</FaqLink></li>
+                    <li><Link className="inline-block py-1 hover:text-brand-bamboo transition-colors" to="/contact">FAQ & Support</Link></li>
                   </ul>
                 </div>
 
@@ -319,7 +432,7 @@ index.html
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <span className="font-label-caps text-[11px] text-inverse-on-surface/70 uppercase tracking-widest hidden sm:inline">
+                  <span className="font-label-caps text-xs text-inverse-on-surface/70 uppercase tracking-widest hidden sm:inline">
                     รักธรรมชาติ = รักตัวเอง
                   </span>
                   <button 
@@ -478,7 +591,7 @@ index.html
           </div>
 
           <div className="mt-12 text-center">
-            <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-widest space-x-3">
+            <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-widest flex flex-wrap justify-center gap-x-3 gap-y-2">
               <span>#ThaiProducts</span>
               <span>•</span>
               <span>#ThaiMadeThaiUsed</span>
@@ -598,7 +711,7 @@ index.html
           <section className="py-16 px-6 md:px-margin-desktop max-w-container-max mx-auto w-full">
             <div className="mb-10 text-left">
               <div className="flex items-center gap-4">
-                <h2 className="font-display-lg text-display-lg-mobile md:text-display-lg text-primary tracking-widest uppercase whitespace-nowrap">KITH Collections</h2>
+                <h2 className="font-display-lg text-[26px] leading-tight sm:text-display-lg-mobile md:text-display-lg text-primary tracking-wider sm:tracking-widest uppercase sm:whitespace-nowrap">KITH Collections</h2>
                 <div className="h-px bg-outline-variant flex-grow"></div>
               </div>
             </div>
@@ -823,7 +936,7 @@ index.html
             <section className="mb-20">
               <div className="mb-12">
                 <div className="flex items-center gap-4">
-                  <h2 className="font-display-lg text-display-lg-mobile md:text-display-lg text-primary tracking-widest uppercase whitespace-nowrap">
+                  <h2 className="font-display-lg text-[26px] leading-tight sm:text-display-lg-mobile md:text-display-lg text-primary tracking-wider sm:tracking-widest uppercase sm:whitespace-nowrap">
                     HANDMADE BAGS
                   </h2>
                   <div className="h-px bg-outline-variant flex-grow"></div>
@@ -852,7 +965,7 @@ index.html
             <section className="mb-20">
               <div className="mb-12">
                 <div className="flex items-center gap-4">
-                  <h2 className="font-display-lg text-display-lg-mobile md:text-display-lg text-primary tracking-widest uppercase whitespace-nowrap">
+                  <h2 className="font-display-lg text-[26px] leading-tight sm:text-display-lg-mobile md:text-display-lg text-primary tracking-wider sm:tracking-widest uppercase sm:whitespace-nowrap">
                     LIFESTYLE &amp; DECOR
                   </h2>
                   <div className="h-px bg-outline-variant flex-grow"></div>
@@ -1376,7 +1489,8 @@ index.html
     // --- MAIN APP ROUTER CONTAINER ---
     const App = () => {
       return (
-        <MemoryRouter initialEntries={["/"]}>
+        <HashRouter>
+          <ScrollToTop />
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/story" element={<StoryPage />} />
@@ -1385,7 +1499,7 @@ index.html
             {/* Fallback route */}
             <Route path="*" element={<HomePage />} />
           </Routes>
-        </MemoryRouter>
+        </HashRouter>
       );
     };
 
